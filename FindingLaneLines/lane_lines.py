@@ -31,10 +31,35 @@ less than low_threshold is rejected. If a pixel falls in between the low and hig
 then it will be selected if it is a main Edge. 
 5. Display the image.
 
+Line detection using Hough Transform:
+Every line can be represented in the form of y = mx + b in cartesian coordinates.
+A point (x,y) can have infinite possible values for m and b since infinite number of lines
+(family of lines) can pass through the point (x,y)
+
+Hough Space is represented by a 2D plane with slope m as the X-axis and intercept b as Y-axis 
+in the form of a line connecting m and b. 
+If there are 2 points in a cartesian plane such that a line can be drawn through them, then it means
+that in the Hough Space, their corresponding lines meet at a point.
+Consider multiple points on a cartesian plane, if a line can be drawn through the points, it means that
+in the Hough space there will be a point of intersection for some value of (m,b). 
+When one line cannot be drawn through all the points, then we draw a grid in the hough space and select the 
+cell where maximum number of lines in Hough Space intersect each other. We then draw a line through those points
+only in the cartesian plane.
+
+We need to use polar cordinates because perpendicular lines cannot be drawn in cartesian plane.
+
+In polar coordinates,
+P = xcos@ + ysin@
+where @ is the angle made by the line with x-axis. 
+
+Hough space consists of P on the y-axis and @ on x-axis. It has sinosodial wave forms and the point
+(@,P) where the waves intersect is the value which will give a line through the points.
+
+
 """
 def canny_image(image):
 	#convert to grayscale
-	gray = cv2.cvtColor(image_copy, cv2.COLOR_RGB2GRAY)
+	gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 	blur = cv2.GaussianBlur(gray, (5,5), 0)
 	canny = cv2.Canny(blur, 50, 150)
 	return canny 
@@ -55,7 +80,10 @@ def region_of_interest(image):
 	mask = np.zeros_like(image)
 	#Overlap our triangle on the mask image to get the ROI in white color.
 	cv2.fillPoly(mask, triangle, 255)
-	return mask 
+	#Let us now use bitwise and operation between every pixel in the masked image and every
+	#pixel in the canny image to get the actual ROI that we need
+	masked_image = cv2.bitwise_and(mask, image)
+	return masked_image
 
 #Read in the image 
 image = cv2.imread('Image/test_image.jpg')
@@ -66,6 +94,7 @@ canny = canny_image(image_copy)
 #Use matplotlib imshow only when co-ordinates are needed.
 # plt.imshow(canny)
 # plt.show()
-cv2.imshow('result', region_of_interest(canny))
+masked_image = region_of_interest(canny)
+cv2.imshow('result', masked_image)
 #waitKey can be used to wait for some period of time before a key is pressed. 0 means infinite waiting time
 cv2.waitKey(0)
