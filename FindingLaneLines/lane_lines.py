@@ -85,6 +85,19 @@ def region_of_interest(image):
 	masked_image = cv2.bitwise_and(mask, image)
 	return masked_image
 
+def display_lines(image, lines):
+	line_image = np.zeros_like(image)
+	if lines is not None:
+		for line in lines:
+			#lines is by default in 2D, so reshape it to 1D
+			#unpack the end points of line
+			x1, y1, x2, y2 = line.reshape(4)
+			#draw the line on the black image
+			#10 is line strength
+			#(255, 0 ,0) means display blue line with 255 intensities and dont display red and green
+			cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 10)
+
+	return line_image
 #Read in the image 
 image = cv2.imread('Image/test_image.jpg')
 #create a copy of image to prevent referencing
@@ -95,6 +108,24 @@ canny = canny_image(image_copy)
 # plt.imshow(canny)
 # plt.show()
 masked_image = region_of_interest(canny)
-cv2.imshow('result', masked_image)
+#idntify all lines in the image
+"""
+Arguments for HoughLinesP function:
+1.image
+2. Pixel error which can be accepted while constructing grid
+3. Angle errors in radians which can be accepted
+4. Threshold (min number of intersections of lines)
+5.minLineLength: Minimum length of the line to consider it valid
+6. maxLineGap: Maximum gap that can be present between two segmented lines.
+"""
+lines = cv2.HoughLinesP(masked_image, 2 , np.pi/180, 100, np.array([]), minLineLength=40, maxLineGap=4)
+line_image = display_lines(image_copy, lines)
+#Now add this detected line on top of the origin image to show the detected line
+#For this we add the identified lines on top of the original image. We add them and not bitwise AND
+#them because we are not dealing with black and white images.
+#We reduce the intensity of original image by multiplying it with 0.8 and increase the intensity of line image
+#set gamma to 1
+combo_image = cv2.addWeighted(image_copy, 0.8, line_image, 1, 1)
+cv2.imshow('result', combo_image)
 #waitKey can be used to wait for some period of time before a key is pressed. 0 means infinite waiting time
 cv2.waitKey(0)
