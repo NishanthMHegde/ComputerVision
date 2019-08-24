@@ -98,6 +98,38 @@ def display_lines(image, lines):
 			cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 10)
 
 	return line_image
+
+def make_coordinates(image, line_fit):
+	slope, intercept = line_fit
+	#Let us use a line on either side that starts from bottom and goes till 3/5th of image
+	y1 = image.shape[0]
+	y2 = int(y1 * 3/5)
+	x1 = int((y1-intercept)/slope)
+	x2 = int((y2-intercept)/slope)
+	return np.array([x1, y1, x2, y2])
+
+def average_slope_intercept(image, lines):
+	left_fit = []
+	right_fit = []
+	#lines on left side have negative slope and right side have positive slope.
+	for line in lines:
+		x1, y1, x2, y2 = line.reshape(4)
+		#We fit a one degree polynomial curve (linear) and get the coefficient values
+		#slope and intercept polynomial values are returned
+		parameters = np.polyfit((x1,x2), (y1,y2), 1)
+		slope = parameters[0]
+		intercept = parameters[1]
+		if slope < 0:
+			left_fit.append((slope, intercept))
+		else:
+			right_fit.append((slope,intercept))
+	#axis=0 implies averaging along the columns
+	left_fit_average = np.average(left_fit, axis=0)
+	right_fit_average = np.average(right_fit, axis=0)
+	left_line = make_coordinates(image, left_fit_average)
+	right_line = make_coordinates(image, right_fit_average)
+	return np.array([left_line, right_line])
+
 #Read in the image 
 image = cv2.imread('Image/test_image.jpg')
 #create a copy of image to prevent referencing
@@ -119,7 +151,9 @@ Arguments for HoughLinesP function:
 6. maxLineGap: Maximum gap that can be present between two segmented lines.
 """
 lines = cv2.HoughLinesP(masked_image, 2 , np.pi/180, 100, np.array([]), minLineLength=40, maxLineGap=4)
-line_image = display_lines(image_copy, lines)
+#instead of having multiple chopped lines, we can find out the averaged single line 
+averaged_lines = average_slope_intercept(image_copy, lines)
+line_image = display_lines(image_copy, averaged_lines)
 #Now add this detected line on top of the origin image to show the detected line
 #For this we add the identified lines on top of the original image. We add them and not bitwise AND
 #them because we are not dealing with black and white images.
